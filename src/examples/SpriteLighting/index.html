@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quad Following The Mouse Example</title>
+  <title>Sprite Lighting Example</title>
 </head>
 
 <body style="background-color: black">
@@ -14,7 +14,7 @@
 </body>
 <script type="module">
   import { initASWebGLue, ASWebGLReady } from '../../ASWebGLue.js';
-  const wasm_file = 'quad_follow_mouse.wasm';
+  const wasm_file = 'sprite_lighting.wasm';
   var exports;
   var last_time = 0;
   var w = window.innerWidth * 0.99;
@@ -29,8 +29,20 @@
     cnvs.height = w;
   }
 
-  var mouse_x = 0.0;
-  var mouse_y = 0.0;
+  function renderFrame() {
+    let delta = 0;
+    if (last_time !== 0) {
+      delta = (new Date().getTime() - last_time);
+    }
+    last_time = new Date().getTime();
+
+    // call the displayLoop function in the WASM module
+    exports.displayLoop(50); //delta);
+
+    // requestAnimationFrame calls renderFrame the next time a frame is rendered
+    requestAnimationFrame(renderFrame);
+
+  }
 
   const memory = new WebAssembly.Memory({ initial: 100 }); // linear memory
 
@@ -51,15 +63,9 @@
       importObject);
     console.log(obj);
     exports = obj.instance.exports;
+    console.log(exports);
     ASWebGLReady(obj, importObject);
-
-    // call the moveMouse function in the WASM module
-    cnvs.addEventListener('mousemove', function (evt) {
-      const rect = cnvs.getBoundingClientRect();
-      mouse_x = ((evt.clientX - rect.left) / cnvs.width) * 2.0 - 1.0;
-      mouse_y = ((1.0 - (evt.clientY - rect.top) / cnvs.height)) * 2.0 - 1.0;
-      exports.moveMouse(mouse_x, mouse_y);
-    }, false);
+    requestAnimationFrame(renderFrame);
   })();
 
 </script>

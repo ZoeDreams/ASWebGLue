@@ -2,17 +2,7 @@
  * @author Rick Battagline / https://embed.com/wasm
  */
 
-import {
-  WebGLShader, shaderSource, createShader, compileShader,
-  VERTEX_SHADER, FRAGMENT_SHADER, createProgram, WebGLProgram,
-  attachShader, useProgram, WebGLUniformLocation, getUniformLocation,
-  linkProgram, clearColor, clear,
-  createBuffer, ARRAY_BUFFER,
-  DYNAMIC_DRAW, FLOAT, COLOR_BUFFER_BIT, DEPTH_TEST, DEPTH_BUFFER_BIT,
-  enableVertexAttribArray, bindBuffer, createContextFromCanvas,
-  bufferData, getAttribLocation, drawArrays, enable, depthFunc,
-  vertexAttribPointer, TRIANGLE_STRIP, GREATER
-} from '../../webgl'
+import {WebGLRenderingContext, WebGLShader, WebGLProgram} from '../../WebGL';
 
 const VERTEX_SHADER_CODE: string = `#version 300 es
   precision highp float;
@@ -20,7 +10,7 @@ const VERTEX_SHADER_CODE: string = `#version 300 es
   in vec3 position;
   in vec3 color;
   out vec4 c;
-  
+
   void main() {
     mat4 mRotateTranslate = mat4(
        1.0, 0.0,       0.0,        0.0, // column 1
@@ -46,69 +36,84 @@ const FRAGMENT_SHADER_CODE: string = `#version 300 es
 `;
 
 // initialize webgl
-var gl = createContextFromCanvas('cnvs', 'webgl2');
+var gl = new WebGLRenderingContext('cnvs', 'webgl2');
 
-let vertex_shader: WebGLShader = createShader(gl, VERTEX_SHADER);
-shaderSource(gl, vertex_shader, VERTEX_SHADER_CODE);
-compileShader(gl, vertex_shader);
+let vertex_shader: WebGLShader = gl.createShader(gl.VERTEX_SHADER);
+gl.shaderSource(vertex_shader, VERTEX_SHADER_CODE);
+gl.compileShader(vertex_shader);
 
-let fragment_shader: WebGLShader = createShader(gl, FRAGMENT_SHADER);
-shaderSource(gl, fragment_shader, FRAGMENT_SHADER_CODE);
-compileShader(gl, fragment_shader);
+let fragment_shader: WebGLShader = gl.createShader(gl.FRAGMENT_SHADER);
+gl.shaderSource(fragment_shader, FRAGMENT_SHADER_CODE);
+gl.compileShader(fragment_shader);
 
-let program = createProgram(gl);
+let program: WebGLProgram = gl.createProgram();
 
-attachShader(gl, program, vertex_shader);
-attachShader(gl, program, fragment_shader);
+gl.attachShader(program, vertex_shader);
+gl.attachShader(program, fragment_shader);
 
-linkProgram(gl, program);
+gl.linkProgram(program);
 
-useProgram(gl, program);
+gl.useProgram(program);
 
-let buffer = createBuffer(gl);
-bindBuffer(gl, ARRAY_BUFFER, buffer);
+let buffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 
-let position_al = getAttribLocation(gl, program, 'position');
-enableVertexAttribArray(gl, position_al);
+let position_al = gl.getAttribLocation(program, 'position');
+gl.enableVertexAttribArray(position_al);
 
-let color_al = getAttribLocation(gl, program, 'color');
-enableVertexAttribArray(gl, color_al);
+let color_al = gl.getAttribLocation(program, 'color');
+gl.enableVertexAttribArray(color_al);
 
-enable(gl, DEPTH_TEST);
+gl.enable(gl.DEPTH_TEST);
 
-//                                  X    Y    Z     R    G    B
-let cube_data: StaticArray<StaticArray<f32>> =
-  [[-0.5, -0.5, 0.5, 1.0, 0.0, 0.0, // front face
-  -0.5, 0.5, 0.5, 1.0, 0.0, 0.0,
-    0.5, -0.5, 0.5, 1.0, 0.0, 0.0,
-    0.5, 0.5, 0.5, 1.0, 0.0, 0.0],
-  //  back face                       X    Y    Z     R    G    B
-  [-0.5, -0.5, -0.5, 0.0, 1.0, 0.0,
-  -0.5, 0.5, -0.5, 0.0, 1.0, 0.0,
-    0.5, -0.5, -0.5, 0.0, 1.0, 0.0,
-    0.5, 0.5, -0.5, 0.0, 1.0, 0.0],
-  //  left face                       X    Y    Z     R    G    B
-  [-0.5, -0.5, -0.5, 0.0, 0.0, 1.0,
-  -0.5, -0.5, 0.5, 0.0, 0.0, 1.0,
-  -0.5, 0.5, -0.5, 0.0, 0.0, 1.0,
-  -0.5, 0.5, 0.5, 0.0, 0.0, 1.0],
-  //  right face                      X    Y    Z     R    G    B
-  [0.5, -0.5, -0.5, 1.0, 0.7, 0.0,
-    0.5, -0.5, 0.5, 1.0, 0.7, 0.0,
-    0.5, 0.5, -0.5, 1.0, 0.7, 0.0,
-    0.5, 0.5, 0.5, 1.0, 0.7, 0.0],
-  //  top face                        X    Y    Z     R    G    B
-  [-0.5, 0.5, -0.5, 1.0, 0.0, 0.7,
-  -0.5, 0.5, 0.5, 1.0, 0.0, 0.7,
-    0.5, 0.5, -0.5, 1.0, 0.0, 0.7,
-    0.5, 0.5, 0.5, 1.0, 0.0, 0.7],
-  //  bottom face                     X    Y    Z     R    G    B
-  [-0.5, -0.5, -0.5, 0.0, 1.0, 0.7,
-  -0.5, -0.5, 0.5, 0.0, 1.0, 0.7,
-    0.5, -0.5, -0.5, 0.0, 1.0, 0.7,
-    0.5, -0.5, 0.5, 0.0, 1.0, 0.7,]];
+// prettier-ignore
+let cube_data: StaticArray<StaticArray<f32>> = [
+  // front face
+  // X     Y    Z    R    G    B
+  [
+    -0.5, -0.5, 0.5, 1.0, 0.0, 0.0,
+    -0.5,  0.5, 0.5, 1.0, 0.0, 0.0,
+     0.5, -0.5, 0.5, 1.0, 0.0, 0.0,
+     0.5,  0.5, 0.5, 1.0, 0.0, 0.0,
+  ],
+  //  back face
+  [
+    -0.5, -0.5, -0.5, 0.0, 1.0, 0.0,
+    -0.5,  0.5, -0.5, 0.0, 1.0, 0.0,
+     0.5, -0.5, -0.5, 0.0, 1.0, 0.0,
+     0.5,  0.5, -0.5, 0.0, 1.0, 0.0,
+  ],
+  //  left face
+  [
+    -0.5, -0.5, -0.5, 0.0, 0.0, 1.0,
+    -0.5, -0.5,  0.5, 0.0, 0.0, 1.0,
+    -0.5,  0.5, -0.5, 0.0, 0.0, 1.0,
+    -0.5,  0.5,  0.5, 0.0, 0.0, 1.0,
+  ],
+  //  right face
+  [
+     0.5, -0.5, -0.5, 1.0, 0.7, 0.0,
+     0.5, -0.5,  0.5, 1.0, 0.7, 0.0,
+     0.5,  0.5, -0.5, 1.0, 0.7, 0.0,
+     0.5,  0.5,  0.5, 1.0, 0.7, 0.0,
+  ],
+  //  top face
+  [
+    -0.5, 0.5, -0.5, 1.0, 0.0, 0.7,
+    -0.5, 0.5,  0.5, 1.0, 0.0, 0.7,
+     0.5, 0.5, -0.5, 1.0, 0.0, 0.7,
+     0.5, 0.5,  0.5, 1.0, 0.0, 0.7,
+  ],
+  //  bottom face
+  [
+    -0.5, -0.5, -0.5, 0.0, 1.0, 0.7,
+    -0.5, -0.5,  0.5, 0.0, 1.0, 0.7,
+     0.5, -0.5, -0.5, 0.0, 1.0, 0.7,
+     0.5, -0.5,  0.5, 0.0, 1.0, 0.7,
+  ]
+];
 
-function rotate(theta: f32): void { //u32 {
+function rotate(theta: f32): void {
   for (var i: i32 = 0; i < cube_data.length; i++) {
     for (var coord_i: i32 = 0; coord_i < cube_data[i].length; coord_i += 6) {
       let x: f32 = cube_data[i][coord_i];
@@ -121,7 +126,6 @@ function rotate(theta: f32): void { //u32 {
       cube_data[i][coord_i] = x1;
       cube_data[i][coord_i + 2] = z1;
     }
-
   }
   return;
 }
@@ -130,16 +134,14 @@ export function displayLoop(delta: i32): void {
   let r: f32 = <f32>delta / 10000.0;
   rotate(r);
 
-  clearColor(gl, 0.0, 0.0, 0.0, 1.0);
-  clear(gl, COLOR_BUFFER_BIT | DEPTH_BUFFER_BIT);
-
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
   for (var i: i32 = 0; i < 6; i++) {
-    bufferData<f32>(gl, ARRAY_BUFFER, cube_data[i], DYNAMIC_DRAW);
+    gl.bufferData<f32>(gl.ARRAY_BUFFER, cube_data[i], gl.DYNAMIC_DRAW);
     //                                   dimensions | data_type | normalize | stride | offset
-    vertexAttribPointer(gl, position_al, 3, FLOAT, false, 24, 0);
-    vertexAttribPointer(gl, color_al, 3, FLOAT, false, 24, 12);
-    drawArrays(gl, TRIANGLE_STRIP, 0, 4);
+    gl.vertexAttribPointer(position_al, 3, gl.FLOAT, +false, 24, 0);
+    gl.vertexAttribPointer(color_al, 3, gl.FLOAT, +false, 24, 12);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
-
 }
